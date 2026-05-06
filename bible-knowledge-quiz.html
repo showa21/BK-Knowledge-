@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bible Knowledge Quiz</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #111827;
+      --gold: #facc15;
+      --green: #22c55e;
+      --red: #ef4444;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --blue: #38bdf8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, Helvetica, sans-serif;
+      background: radial-gradient(circle at top, #1e293b, var(--bg));
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .app { width: min(920px, 100%); }
+    .card {
+      background: rgba(17, 24, 39, 0.94);
+      border: 1px solid rgba(250, 204, 21, 0.18);
+      border-radius: 28px;
+      padding: 28px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.35);
+    }
+    h1 { margin: 0 0 8px; font-size: clamp(2rem, 5vw, 4rem); line-height: 1; }
+    .gold { color: var(--gold); }
+    .subtitle { color: var(--muted); font-size: 1.05rem; margin-bottom: 22px; }
+    .topbar { display:flex; justify-content:space-between; gap:12px; align-items:center; margin-bottom:18px; flex-wrap:wrap; }
+    .pill { background:#020617; border:1px solid #334155; padding:10px 14px; border-radius:999px; color:#e2e8f0; font-weight:bold; }
+    .progress-wrap { height: 12px; background: #020617; border-radius: 999px; overflow:hidden; margin: 18px 0 26px; }
+    .progress { height:100%; width:0%; background: linear-gradient(90deg, var(--blue), var(--gold)); transition: width .25s ease; }
+    .question { font-size: clamp(1.4rem, 3vw, 2.1rem); font-weight: 800; line-height: 1.25; margin: 16px 0 20px; }
+    input {
+      width: 100%;
+      padding: 18px 16px;
+      border-radius: 18px;
+      border: 2px solid #334155;
+      background: #020617;
+      color: var(--text);
+      font-size: 1.1rem;
+      outline: none;
+    }
+    input:focus { border-color: var(--gold); }
+    .buttons { display:flex; gap:12px; flex-wrap:wrap; margin-top:18px; }
+    button {
+      border: 0;
+      border-radius: 16px;
+      padding: 14px 18px;
+      font-size: 1rem;
+      font-weight: 800;
+      cursor: pointer;
+      color: #020617;
+      background: var(--gold);
+      transition: transform .15s ease, opacity .15s ease;
+    }
+    button:hover { transform: translateY(-1px); }
+    button.secondary { background:#334155; color:var(--text); }
+    button.good { background: var(--green); }
+    button.bad { background: var(--red); color: white; }
+    .feedback { min-height: 64px; margin-top:18px; font-size:1.08rem; line-height:1.5; }
+    .correct { color: var(--green); font-weight: 800; }
+    .wrong { color: #fca5a5; font-weight: 800; }
+    .answer { color: var(--gold); font-weight: 800; }
+    .hidden { display:none; }
+    .score-big { font-size: clamp(3rem, 10vw, 6rem); font-weight: 900; color: var(--gold); margin: 10px 0; }
+    .review { margin-top: 20px; max-height: 280px; overflow:auto; padding-right:8px; }
+    .review-item { border-top:1px solid #334155; padding:14px 0; }
+    @media (max-width:600px) { .card { padding:20px; border-radius:22px; } button { width:100%; } }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section id="start" class="card">
+      <h1>Bible <span class="gold">Knowledge</span> Quiz</h1>
+      <p class="subtitle">Answer each question, check your response, and see your score at the end.</p>
+      <div class="topbar">
+        <div class="pill">54 Questions</div>
+        <div class="pill">Type-in Answers</div>
+        <div class="pill">GitHub Pages Ready</div>
+      </div>
+      <button onclick="startQuiz()">Start Quiz</button>
+    </section>
+
+    <section id="quiz" class="card hidden">
+      <div class="topbar">
+        <div class="pill" id="counter">Question 1 of 54</div>
+        <div class="pill" id="score">Score: 0</div>
+      </div>
+      <div class="progress-wrap"><div id="progress" class="progress"></div></div>
+      <div id="question" class="question"></div>
+      <input id="answerInput" type="text" placeholder="Type your answer here..." onkeydown="if(event.key==='Enter') checkAnswer()" />
+      <div class="buttons">
+        <button onclick="checkAnswer()">Check Answer</button>
+        <button class="secondary" onclick="showAnswer()">Show Answer</button>
+        <button class="secondary" onclick="nextQuestion()">Next</button>
+      </div>
+      <div id="feedback" class="feedback"></div>
+    </section>
+
+    <section id="end" class="card hidden">
+      <h1>Quiz <span class="gold">Complete</span></h1>
+      <div id="finalScore" class="score-big"></div>
+      <p id="finalMessage" class="subtitle"></p>
+      <button onclick="restartQuiz()">Play Again</button>
+      <div id="review" class="review"></div>
+    </section>
+  </main>
+
+  <script>
+    const questions = [{"category": "BK", "question": "What is the 2nd to last book in the Bible's Old Testament?", "answer": "Zechariah"}, {"category": "BK", "question": "What is the 5th book of the Bible's New Testament?", "answer": "Acts of the Apostles"}, {"category": "BK", "question": "There a 4 major prophetic books in the bible which one of them features the story of 3 Hebrew boys in a fiery furnace?", "answer": "Daniel"}, {"category": "BK", "question": "How many books of the Bible's Old Testament are named after women?", "answer": "Two (Specifically the books of Ruth and Esther)"}, {"category": "BK", "question": "In which garden did Jesus pray before his crucifixion?", "answer": "Garden of Gethsemane"}, {"category": "BK", "question": "In which town did Jesus turn water into wine at a wedding?", "answer": "Cana"}, {"category": "BK", "question": "Which of the disciples of Jesus was known as Nathaniel?", "answer": "Bartholomew"}, {"category": "BK", "question": "What was the name of the woman from the town of Magdala out of whom Jesus cast out 7 demons?", "answer": "Mary Magdalene"}, {"category": "BK", "question": "Complete this beatitude, blessed are the pure in heart...", "answer": "for they shall see God"}, {"category": "BK", "question": "complete this beatitude, blessed are the peacemakers...", "answer": "for they shall be called the children of God"}, {"category": "BK", "question": "Jesus performed his first miracle in which specific town?", "answer": "Cana of Galilee"}, {"category": "BK", "question": "In which of the gospels was the story of the Prodigal Son recorded?", "answer": "St.Luke"}, {"category": "BK", "question": "Who was the youngest son of Jesse?", "answer": "David"}, {"category": "BK", "question": "How many sons did David's father Jesse have?", "answer": "8 sons"}, {"category": "BK", "question": "Which of the disciples was set to be the one who lay his head on the breast of Jesus?", "answer": "John"}, {"category": "BK", "question": "The biblical character Noah had 3 sons which one saw his father's nakedness?", "answer": "Ham"}, {"category": "BK", "question": "Which book of the bible comes immediately after Micah?", "answer": "Nahum"}, {"category": "BK", "question": "Which book of the Bible comes immediately after Amos?", "answer": "Obadiah"}, {"category": "BK", "question": "In the Parable of the Sower the seed fell on 4 types. What did the seed represent?", "answer": "The Word of God"}, {"category": "BK", "question": "What was the career or profession of the apostle Paul outside of his ministry?", "answer": "Tent making"}, {"category": "BK", "question": "Who were the parents of Samuel?", "answer": "Hanna and Elkahanah"}, {"category": "BK", "question": "Who were the parents of Jacob?", "answer": "Isaac and Rebekah"}, {"category": "BK", "question": "In the Bible Lazarus was a man whom Jesus raised from the dead had how many sisters?", "answer": "Two (2)"}, {"category": "BK", "question": "For how many pieces of silver was Joseph. sold into slavery?", "answer": "20 pieces of silver"}, {"category": "BK", "question": "Which relative of Jairus did Jesus raise from the dead?", "answer": "Daughter"}, {"category": "BK", "question": "Which relative of Peter did Jesus heal of a fever?", "answer": "Mother-in-law"}, {"category": "BK", "question": "Which man in the Bible had 3 friends described as miserable comforters?", "answer": "Job"}, {"category": "BK", "question": "Which prophet challenged many prophets of Baal on Mount Carmel?", "answer": "Elijah"}, {"category": "BK", "question": "The killing of the fatted calf was part of a celebration in which parable of the Bible?", "answer": "The Prodigal Son"}, {"category": "BK", "question": "In the Parable of the 10 virgins how many took their lamps and went out to meet the bridegroom?", "answer": "10 virgins"}, {"category": "BK", "question": "Jesus performed his first miracle of turning water into wine as recorded in which of the Gospels?", "answer": "John"}, {"category": "BK", "question": "In which book of the bible is the verse The wages of sin is death but the gift of God is eternal life?", "answer": "Romans"}, {"category": "BK", "question": "Who anointed David to be King of Israel?", "answer": "Samuel"}, {"category": "BK", "question": "Who was the only female judge of Israel?", "answer": "Deborah"}, {"category": "BK", "question": "For how long did Jacob serve his uncle Laban before he was given. Leah as a wife?", "answer": "7 years"}, {"category": "BK", "question": "Jonah was sent by God to preach to the people of Nineveh but initially headed to which. city?", "answer": "Tarshish"}, {"category": "BK", "question": "On what day of creation did God make the sun and the moon?", "answer": "The 4th day"}, {"category": "BK", "question": "On what day of creation did God make man?", "answer": "The 6th day"}, {"category": "BK", "question": "Which of the apostles was known as the son of Consolation?", "answer": "Barnabas"}, {"category": "BK", "question": "Who bought a field of blood known as Aceldama?", "answer": "Judas"}, {"category": "BK", "question": "Who wrote the book of Lamentations in the Bible?", "answer": "Jeremiah"}, {"category": "BK", "question": "What is the first epistle of Paul which appears in the Bible?", "answer": "Romans"}, {"category": "BK", "question": "After the flood in Noah's time for how many days did the water remain on Earth?", "answer": "150 days"}, {"category": "BK", "question": "What was the 9th of the 10 plagues. which afflicted Egypt in the time of Moses?", "answer": "Darkness"}, {"category": "BK", "question": "Who were the first twins mentioned in the Bible?", "answer": "Esau and Jacob"}, {"category": "BK", "question": "Who was the mother of the first set of twins mentioned in the Bible?", "answer": "Rebekah"}, {"category": "BK", "question": "What was the name of the man whose vineyard was stolen by Ahab and his wife Jezebel?", "answer": "Naboth"}, {"category": "BK", "question": "How many daughters did Phillip the evangelist have?", "answer": "Four (4)"}, {"category": "BK", "question": "What was the name of the angel who appeared to Mary the mother of Jesus?", "answer": "Gabriel"}, {"category": "BK", "question": "To which country did Mary take baby Jesus to escape from the threat of Herod?", "answer": "Egypt"}, {"category": "BK", "question": "Who was the second person to come upon the injured man in the parable of the good samaritan?", "answer": "Levite"}, {"category": "BK", "question": "How many chapters are in the Old Testament book of Obadiah?", "answer": "One (1)"}, {"category": "BK", "question": "Complete this beatitude Blessed are the poor in spirit...?", "answer": "For theirs is the Kingdom of Heaven"}, {"category": "BK", "question": "Complete this beatitude Blessed are the peacemakers..?", "answer": "For they shall be called the Children of God"}];
+    let current = 0;
+    let score = 0;
+    let answered = false;
+    let results = [];
+
+    function normalize(text) {
+      return text.toLowerCase()
+        .replace(/\([^)]*\)/g, '')
+        .replace(/[^a-z0-9\s]/g, '')
+        .replace(/saint/g, 'st')
+        .replace(/and/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function isCorrect(userAnswer, correctAnswer) {
+      const u = normalize(userAnswer);
+      const c = normalize(correctAnswer);
+      if (!u) return false;
+      return u === c || c.includes(u) || u.includes(c);
+    }
+
+    function startQuiz() {
+      document.getElementById('start').classList.add('hidden');
+      document.getElementById('quiz').classList.remove('hidden');
+      showQuestion();
+    }
+
+    function showQuestion() {
+      answered = false;
+      const q = questions[current];
+      document.getElementById('counter').textContent = `Question ${current + 1} of ${questions.length}`;
+      document.getElementById('score').textContent = `Score: ${score}`;
+      document.getElementById('progress').style.width = `${(current / questions.length) * 100}%`;
+      document.getElementById('question').textContent = q.question;
+      document.getElementById('answerInput').value = '';
+      document.getElementById('answerInput').disabled = false;
+      document.getElementById('feedback').innerHTML = '';
+      document.getElementById('answerInput').focus();
+    }
+
+    function checkAnswer() {
+      if (answered) return;
+      const userAnswer = document.getElementById('answerInput').value.trim();
+      const correct = questions[current].answer;
+      const ok = isCorrect(userAnswer, correct);
+      answered = true;
+      document.getElementById('answerInput').disabled = true;
+      if (ok) {
+        score++;
+        document.getElementById('feedback').innerHTML = `<span class="correct">Correct!</span> The answer is <span class="answer">${correct}</span>.`;
+      } else {
+        document.getElementById('feedback').innerHTML = `<span class="wrong">Not quite.</span> Correct answer: <span class="answer">${correct}</span>.`;
+      }
+      results.push({ question: questions[current].question, yourAnswer: userAnswer || 'No answer', correctAnswer: correct, correct: ok });
+      document.getElementById('score').textContent = `Score: ${score}`;
+    }
+
+    function showAnswer() {
+      if (answered) return;
+      answered = true;
+      const correct = questions[current].answer;
+      const userAnswer = document.getElementById('answerInput').value.trim();
+      document.getElementById('answerInput').disabled = true;
+      document.getElementById('feedback').innerHTML = `Answer: <span class="answer">${correct}</span>.`;
+      results.push({ question: questions[current].question, yourAnswer: userAnswer || 'Shown answer', correctAnswer: correct, correct: false });
+    }
+
+    function nextQuestion() {
+      if (!answered) checkAnswer();
+      current++;
+      if (current >= questions.length) endQuiz();
+      else showQuestion();
+    }
+
+    function endQuiz() {
+      document.getElementById('quiz').classList.add('hidden');
+      document.getElementById('end').classList.remove('hidden');
+      document.getElementById('progress').style.width = '100%';
+      const percent = Math.round((score / questions.length) * 100);
+      document.getElementById('finalScore').textContent = `${score}/${questions.length}`;
+      document.getElementById('finalMessage').textContent = percent >= 80 ? `Excellent work! You scored ${percent}%.` : percent >= 50 ? `Good effort. You scored ${percent}%. Keep practicing.` : `You scored ${percent}%. Review the answers and try again.`;
+      document.getElementById('review').innerHTML = results.map((r, i) => `
+        <div class="review-item">
+          <strong>${i + 1}. ${r.question}</strong><br>
+          Your answer: ${r.yourAnswer}<br>
+          Correct answer: <span class="answer">${r.correctAnswer}</span><br>
+          Result: ${r.correct ? '<span class="correct">Correct</span>' : '<span class="wrong">Wrong/Shown</span>'}
+        </div>
+      `).join('');
+    }
+
+    function restartQuiz() {
+      current = 0;
+      score = 0;
+      answered = false;
+      results = [];
+      document.getElementById('end').classList.add('hidden');
+      document.getElementById('quiz').classList.remove('hidden');
+      showQuestion();
+    }
+  </script>
+</body>
+</html>
